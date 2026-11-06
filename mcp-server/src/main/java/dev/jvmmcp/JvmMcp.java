@@ -70,7 +70,15 @@ public class JvmMcp implements Callable<Integer> {
 
     @Generated
     public static void main(String[] args) {
-        int exitCode = new CommandLine(new JvmMcp()).execute(args);
+        // Picocli inspects sibling commands that reference Attach API types at startup.
+        int exitCode;
+        if (args.length > 0 && "doctor".equals(args[0]) && !DoctorCommand.hasAttachModule()) {
+            exitCode =
+                    new CommandLine(new DoctorCommand())
+                            .execute(java.util.Arrays.copyOfRange(args, 1, args.length));
+        } else {
+            exitCode = new CommandLine(new JvmMcp()).execute(args);
+        }
         System.exit(exitCode);
     }
 }

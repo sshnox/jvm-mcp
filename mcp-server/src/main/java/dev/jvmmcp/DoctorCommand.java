@@ -48,6 +48,12 @@ public class DoctorCommand implements Callable<Integer> {
         System.out.println();
 
         System.out.println("Checking Attach API Capabilities...");
+        if (!hasAttachModule()) {
+            System.out.println("[ERROR] The jdk.attach module is unavailable.");
+            System.out.println(
+                    "    Resolution: Run this CLI with a full JDK that includes jdk.attach.");
+            return 1;
+        }
         try {
             var jvms = attachService.listJvms();
             System.out.println("[OK] Attach API is functioning.");
@@ -76,6 +82,10 @@ public class DoctorCommand implements Callable<Integer> {
         System.out.println();
         System.out.println("Your system is ready to use JVM-MCP.");
         return 0;
+    }
+
+    static boolean hasAttachModule() {
+        return ModuleLayer.boot().findModule("jdk.attach").isPresent();
     }
 
     static boolean checkJavaVersion(Runtime.Version version, java.io.PrintStream out) {

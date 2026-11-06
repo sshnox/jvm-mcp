@@ -9,7 +9,10 @@ import dev.jvmmcp.core.model.Framework;
 import dev.jvmmcp.core.model.JvmProcess;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
@@ -126,6 +129,34 @@ class DoctorCommandTest {
                             "Resolution: Ensure you are running this CLI as the same user as the target JVM.");
         } finally {
             System.setOut(originalOut);
+        }
+    }
+
+    @Test
+    @DisplayName("doctor reports a missing Attach module without a stack trace")
+    void shouldReportMissingAttachModule() throws Exception {
+        String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+        Process process =
+                new ProcessBuilder(
+                                java,
+                                "--limit-modules",
+                                "java.se",
+                                "-cp",
+                                System.getProperty("java.class.path"),
+                                JvmMcp.class.getName(),
+                                "doctor")
+                        .redirectErrorStream(true)
+                        .start();
+        try {
+            assertThat(process.waitFor(15, TimeUnit.SECONDS)).isTrue();
+            String output =
+                    new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            assertThat(output)
+                    .contains("jdk.attach module is unavailable", "Run this CLI with a full JDK")
+                    .doesNotContain("NoClassDefFoundError", "Your system is ready");
+            assertThat(process.exitValue()).isEqualTo(1);
+        } finally {
+            process.destroyForcibly();
         }
     }
 
